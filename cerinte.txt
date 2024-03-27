@@ -1,0 +1,8 @@
+mini poiect ->mini aplicatie de versionare
+
+pt un commit acasa sau lab: saptN_home/saptN_lab
+
+cerinta sapt6:
+utilzatorul va putea specifica dir de monitorizat ca arg in linia de cmd iar prog va urmarii schimbariele care vor aparea in acesta si in subdirectoarele sala.La fiecare rulare a prog se va actualiza captura(sanapshot,versiunea) stocand metadatele fiecarei intrari
+
+cerinta sapt7:
