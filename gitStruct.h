@@ -6,17 +6,20 @@
 #include<fcntl.h>
 #include<stdlib.h>
 #include<unistd.h>
+#include<time.h>
 
 typedef struct{
     ino_t inodeNo;
     mode_t type;
     off_t totalSize;
-    struct timespec timeLastModiff;   /* time of last modification */
+    struct timespec timeLastModiff;   /* time of last modification */ 
 }internalData;
 
-typedef struct{
+typedef struct Entries{
 char *fileName;
 internalData *metadata;
+Entries **next;
+int filesCount
 }Entries;
 
 typedef struct{
