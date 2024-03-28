@@ -21,6 +21,7 @@ internalData *metadata;
 
 typedef struct{
     char *directoryName;
+    ino_t dirIdent;
     Entries *entry;
     int entryCount;
 }LocalDir;
@@ -29,13 +30,12 @@ typedef struct{
 int gitinit(char *dirToSaveName,LocalDir **dirToSave);
 //-1 nu exista directorul in calea curenta(unde se afla fisierul de unde sunt executate fct astea) sau fis nu e director
 //0-daca fisierul e deja versionat 
-//1-daca fisierul nu e versionat
+//1-daca fisierul nu e versionat s-a salvat vers curenta a lui
 //fct lucreaza pe dirToSave ,iar daca e cazul 0,1 va retine un pt catre directorul trackuit(la care i s a creat deja o vers/snapshot)
-LocalDir *gitcommit(LocalDir *dirToCheck);
+LocalDir *gitcheck(LocalDir *dirToCheck);
 //!null =nu s-au gasit modiff
 //null =s-au gasit modiff si  noul snapshot e returnat
 int gitcommit(LocalDir *dirToCommit);
 //1 daca s a salvat un snapshot diferit ,0daca nu s a detectat nicio schimbare
-
 //combinat gitinit(argc[1],&dir);gitcommit(gitcheck(dir));vede daca dir argc[1] exista si e deja versionat daca nu il versioneaza 
 #endif

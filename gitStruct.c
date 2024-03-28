@@ -4,19 +4,18 @@
 #define gitSavesFile "metadata.bin"
 
 
-
 void readFile(LocalDir *reff,struct dirent *i){
-    reff->directoryName=i->d_name;
-
     char *path;
-    if((path=malloc(strlen(gitSaves)+strlen(reff->directoryName)+strlen(gitSavesFile)+3)==NULL))return;
-    strcat(path,gitSaves);strcat(path,"/");strcat(path,reff->directoryName);
+    
+    if((path=malloc(strlen(gitSaves)+strlen(i->d_name)+strlen(gitSavesFile)+3)==NULL))return;
+    strcat(path,gitSaves);strcat(path,"/");strcat(path,i->d_name);
     strcat(path,"/");strcat(gitSavesFile);path[strlen(path)]='\0';
 
     int file=open(path,O_RDONLY);
 
-
 int sizeString;
+reff->directoryName=i->d_name;
+read(file,&reff->dirIdent,sizeof(ino_t));
 read(file,reff->entryCount,sizeof(int));
 reff->entry=malloc(sizeof(Entries)*reff->entryCount);
 for(int i=0;i<reff->entryCount;i++)
@@ -32,8 +31,11 @@ for(int i=0;i<reff->entryCount;i++)
     read(file,&reff->entry[i].metadata->totalSize,sizeof(off_t)); 
     read(file,&reff->entry[i].metadata->timeLastModiff,sizeof(struct timespec)); 
 }
+close(file);
 }
+
 void writeFile(int file,LocalDir *newDir){
+write(file,newDir->dirIdent,sizeof(ino_t));
 write(file,newDir->entryCount,sizeof(int));
 for(int i=0;i<newDir->entryCount;i++)
 {
@@ -45,6 +47,7 @@ for(int i=0;i<newDir->entryCount;i++)
     write(file,&newDir->entry[i].metadata->timeLastModiff,sizeof(struct timespec)); 
 }
 }
+
 LocalDir **gitLoad(){//nu putem vect deoarece struct stat trebuie sa fie salvat de catre un * 
  struct stat trash;
     if(lstat(gitSaves,&trash)==-1)return NULL;//nu exista localSaves
@@ -56,6 +59,23 @@ LocalDir **gitLoad(){//nu putem vect deoarece struct stat trebuie sa fie salvat 
     readFile(array[index-1],i);
   }
 return array;
+}
+
+LocalDir *find(char *dirToFind){
+    LocalDir **database;
+if( !(database=gitLoad()))return NULL;
+
+struct stat trash;
+struct *path=malloc(strlen(gitSaves)+strlen(dirToFind)+1);
+strcat(path,gitSaves);strcat(path,"/");strcat(path,dirToFind);path[strlen(path)]='\0';
+
+if(lstat(path,&trash)==-1)return NULL;//dir nu exista in folderul gitSaves
+for(int i=0;i<size;i++){
+    if(database[i]->dirIdent==trash.st_ino)
+    return database[i];
+}
+//poate are acelasi nume dar iNode differit
+return NULL;
 }
 
 void deleteDir(LocalDir *dirToDelete){
@@ -75,6 +95,7 @@ void deleteDir(LocalDir *dirToDelete){
     if(rmdir(path)){free(path);return;}
     free(path);
 }
+
 void writeDir(LocalDir *newDir) {
     struct stat trash;
     if (lstat(gitSaves, &trash) == -1) {
@@ -98,8 +119,9 @@ void writeDir(LocalDir *newDir) {
 }
 
 void gitWrite(LocalDir *newDir){
-LocalDir **dataBase=gitLoad(),*copy;
-    if((*copy=find(dataBase,newDir->directoryName))==NULL){
+LocalDir *copy;
+
+    if((*copy=find(newDir->directoryName))==NULL){
         writeDir(newDir);
     }else
     {
@@ -110,6 +132,10 @@ LocalDir **dataBase=gitLoad(),*copy;
 
 void makeLocal(char *dirToSaveName,LocalDir **dirToSave){
     //copiaza metadatele in pt si le incarca in db 
+    *dirToSave=malloc(sizeof(LocalDir));
+    //incarcanm datele recursiv si dupa le scriem
+
+    gitWrite(*dirToSave);
 }
 
 int gitinit(char *dirToSaveName,LocalDir **dirToSave){
@@ -117,8 +143,12 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     if(lstat(dirToSaveName,&infoDir)==-1){
        return -1;
     }if(!S_IFDIR(infoDir.st_mode))return -1;
-    LocalDir **dataBase=gitLoad();
-    if((*dirToSave=find(dataBase,dirToSaveName))==NULL){
-        makeLocal(dirToSaveName,dirToSave);
+
+    LocalDir *aux;
+
+    if((*dirToSave=find(dirToSaveName))==NULL){
+        makeLocal(dirToSaveName,*dirToSave);
+        return 1;
     }
+    return 0;
 }
