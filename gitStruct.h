@@ -1,5 +1,7 @@
 #ifndef GITSTRUCT
 #define GITSTRUCT
+
+//lib de sistem
 #include<dirent.h>
 #include<sys/types.h>
 #include<sys/stat.h>
@@ -7,6 +9,8 @@
 #include<stdlib.h>
 #include<unistd.h>
 #include<time.h>
+#define gitSaves "localSaves"
+#define gitSavesFile "metadata.bin"
 
 typedef struct{
     ino_t inodeNo;
@@ -18,8 +22,8 @@ typedef struct{
 typedef struct Entries{
 char *fileName;
 internalData *metadata;
-Entries **next;
-int filesCount
+struct Entries **next;
+int filesCount;
 }Entries;
 
 typedef struct{

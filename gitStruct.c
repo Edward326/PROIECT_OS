@@ -1,15 +1,19 @@
 #include<stdio.h>
+#include<string.h>
 #include"gitStruct.h"
-#define gitSaves "localSaves"
-#define gitSavesFile "metadata.bin"
+
 
 
 Entries* newEntryRead(int file){
     Entries *elem=malloc(sizeof(Entries));
     
     int sizeString;
-    read(file,&sizeString,sizeof(int));   
+    read(file,&sizeString,sizeof(int));//CORRUPTION!!
+    elem->fileName=malloc(sizeString+1);   
     read(file,elem->fileName,sizeString);
+    elem->fileName[sizeString]='\0';
+    
+    
     read(file,&elem->metadata->inodeNo,sizeof(ino_t)); 
     read(file,&elem->metadata->type,sizeof(mode_t)); 
     read(file,&elem->metadata->totalSize,sizeof(off_t)); 
@@ -30,17 +34,21 @@ void readFile(LocalDir *reff,struct dirent *i){
 
     char *path;
     path=malloc(strlen(gitSaves)+strlen(i->d_name)+strlen(gitSavesFile)+3);
-    strcat(path,gitSaves);strcat(path,"/");strcat(path,i->d_name);
-    strcat(path,"/");strcat(gitSavesFile);path[strlen(path)]='\0';
+    strcpy(path,gitSaves);strcat(path,"/");strcat(path,i->d_name);
+    strcat(path,"/");strcat(path,gitSavesFile);path[strlen(path)]='\0';
+    
+ 
 
-    int file=open(path,O_RDONLY);
+    int file=open(path,O_RDWR);
+    lseek(file,0,SEEK_SET);
 
 reff->directoryName=i->d_name;
 read(file,&reff->dirIdent,sizeof(ino_t));
 read(file,&reff->entryCount,sizeof(int));
 reff->entry=NULL;
-if(reff->entry)
+if(reff->entryCount)
 {reff->entry=malloc(sizeof(Entries)*(reff->entryCount));}
+
 for(int i=0;i<reff->entryCount;i++)
     reff->entry[i]=*newEntryRead(file);
 
@@ -56,6 +64,7 @@ close(file);
 void writeFileRecc(int file,Entries newDir){
      
     int size=strlen(newDir.fileName);
+
     write(file,&size,sizeof(int));   
     write(file,newDir.fileName,size);
     write(file,&newDir.metadata->inodeNo,sizeof(ino_t)); 
@@ -72,8 +81,8 @@ void writeFileRecc(int file,Entries newDir){
 }
 
 void writeFile(int file,LocalDir *newDir){
-write(file,newDir->dirIdent,sizeof(ino_t));
-write(file,newDir->entryCount,sizeof(int));
+write(file,&newDir->dirIdent,sizeof(ino_t));
+write(file,&newDir->entryCount,sizeof(int));
 for(int i=0;i<newDir->entryCount;i++)
    writeFileRecc(file,newDir->entry[i]);
 }
@@ -90,12 +99,14 @@ LocalDir **gitLoad(int *size){
   
   LocalDir **array=NULL;DIR *dir;dir=opendir(gitSaves);int index=0;
   struct dirent *i;
-  while(i=readdir(dir)){
+  while((i=readdir(dir))){
+     if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
     array=realloc(array,(++index)*sizeof(LocalDir*));
     array[index-1]=malloc(sizeof(LocalDir));
     readFile(array[index-1],i);
   }
   *size=index;
+  closedir(dir);
 return array;
 }
 //--------------------------------------------------------fct pt incarcarea tuturor dir urilor versionate intr un dataBase returneza un array de dir versionate,si specifica cate sunt in size
@@ -112,7 +123,7 @@ if( !(database=gitLoad(&size)))return NULL;
 
 struct stat trash;
 char *path=malloc(strlen(gitSaves)+strlen(dirToFind)+1);
-strcat(path,gitSaves);strcat(path,"/");strcat(path,dirToFind);path[strlen(path)]='\0';
+strcpy(path,gitSaves);strcat(path,"/");strcat(path,dirToFind);path[strlen(path)]='\0';
 
 if(lstat(path,&trash)==-1)return NULL;//dir nu exista in folderul gitSaves
 for(int i=0;i<size;i++){
@@ -136,14 +147,14 @@ void deleteDir(LocalDir *dirToDelete){
 
     DIR *dir;dir=opendir(gitSaves);
     struct dirent *i;
-    for(i=readdir(dir);i || strcmp(i->d_name,dirToDelete->directoryName);i=readdir(dir));
+    for(i=readdir(dir);i && strcmp(i->d_name,dirToDelete->directoryName);i=readdir(dir));
     closedir(dir);
 
     if(!i)return;//not finded
 
     char *path;
-    if((path=malloc(strlen(gitSaves)+strlen(dirToDelete->directoryName)+2)==NULL))return;
-    strcat(path,gitSaves);strcat(path,"/");strcat(path,dirToDelete->directoryName);path[strlen(path)]='\0';
+    if((path=malloc(strlen(gitSaves)+strlen(dirToDelete->directoryName)+2))==NULL)return;
+    strcpy(path,gitSaves);strcat(path,"/");strcat(path,dirToDelete->directoryName);path[strlen(path)]='\0';
 
     if(rmdir(path)){free(path);return;}
     free(path);
@@ -156,16 +167,18 @@ void writeDir(LocalDir *newDir) {
     }
 
     char *path;
-    if((path=malloc(strlen(gitSaves)+strlen(newDir->directoryName)+2)==NULL))return;
-    strcat(path,gitSaves);strcat(path,"/");strcat(path,newDir->directoryName);path[strlen(path)]='\0';
-
+    if((path=malloc(strlen(gitSaves)+strlen(newDir->directoryName)+2))==NULL)return;
+    strcpy(path,gitSaves);strcat(path,"/");strcat(path,newDir->directoryName);path[strlen(path)]='\0';
+      
+      
     if (mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) == -1){free(path);return;}
 
-    if(path=realloc(path,strlen(gitSaves)+strlen(newDir->directoryName)+strlen(gitSavesFile)+3)==NULL)return;
+    if((path=realloc(path,strlen(gitSaves)+strlen(newDir->directoryName)+strlen(gitSavesFile)+3))==NULL)return;
     strcat(path,"/");strcat(path,gitSavesFile);path[strlen(path)]='\0';
+  //puts(path);
 
     int fileDesc;
-    if((fileDesc=open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO))==-1){ free(path);return;}
+    if((fileDesc=open(path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO))==-1){ free(path);return;}
     writeFile(fileDesc,newDir);
     close(fileDesc);
     free(path);
@@ -197,36 +210,44 @@ internalData *newElem=malloc(sizeof(internalData));
 newElem->inodeNo=info.st_ino;
 newElem->type=info.st_mode;
 newElem->totalSize=info.st_size;
-newElem->timeLastModiff=info.st_mtime;
+
+ struct timespec ts;
+    ts.tv_sec = info.st_mtime;
+    ts.tv_nsec = 0;
+    newElem->timeLastModiff=ts;
+
 return newElem;
 }
 
 Entries* newFileEntry(char *path,char *filename){
 
-    Entries elem=malloc(sizeof(Entries));
+    Entries *elem=malloc(sizeof(Entries));
     elem->fileName=filename;
     elem->metadata=newInternalData(path);
     elem->next=NULL;
     elem->filesCount=0;
-
+    return elem;
 }
 
-Entries* newEntry(char *path,char *filename){
+Entries* newEntry(char *pathOriginal,char *filename){
+    
+    char *path=malloc(strlen(pathOriginal)+strlen(filename)+2);
+    strcpy(path,pathOriginal);strcat(path,"/");
+    strcat(path,filename);path[strlen(path)]='\0';
+    
 
-    
-    path=realloc(path,strlen(path)+strlen(filename)+2);
-    strcat(path,"/");strcat(path,filename);path[strlen(path)]='\0';
-    
     struct stat info;
-    if(lstat(path,&info)==-1)return;
+    if(lstat(path,&info)==-1)return NULL;
 
     if(S_ISREG(info.st_mode)){
-        free(path);
-      return newFileEntry(path,filename);
+      Entries *reff=newFileEntry(path,filename);
+      free(path);
+      //puts(filename);
+      return reff;
     }
     else
     if(S_ISDIR(info.st_mode)){
-        Entries elem=malloc(sizeof(Entries));
+        Entries *elem=malloc(sizeof(Entries));
        elem->fileName=filename;
        elem->metadata=newInternalData(path);
        elem->next=NULL;
@@ -237,7 +258,8 @@ Entries* newEntry(char *path,char *filename){
 
     int index=0;
     struct dirent *i;
-    while(i=readdir(dir)){
+    while((i=readdir(dir))){
+         if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
     elem->next=realloc(elem->next,sizeof(Entries*)*(++index));
     elem->next[index-1]=newEntry(path,i->d_name);
     }
@@ -246,6 +268,8 @@ Entries* newEntry(char *path,char *filename){
     free(path);
     return elem;
     }
+    return NULL;
+    
 }
 
 void loadCurrentDir(char *dirToSaveName,LocalDir *dirToSave){
@@ -257,12 +281,15 @@ void loadCurrentDir(char *dirToSaveName,LocalDir *dirToSave){
        if(lstat(dirToSaveName,&inf)==-1)return;
     dirToSave->dirIdent=inf.st_ino;
     dirToSave->entry=NULL;
+struct dirent *i;
 
-while(i=readdir(dir)){
+while((i=readdir(dir))){
+      if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
       dirToSave->entry=realloc(dirToSave->entry,sizeof(Entries)*(++index));
       dirToSave->entry[index-1]=*newEntry(dirToSaveName,i->d_name);
 }
 dirToSave->entryCount=index;
+closedir(dir);
 }
 
 void makeLocal(char *dirToSaveName,LocalDir **dirToSave){
@@ -282,10 +309,8 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     struct stat infoDir;
     if(lstat(dirToSaveName,&infoDir)==-1){
        return -1;
-    }if(!S_IFDIR(infoDir.st_mode))return -1;
-
-    LocalDir *aux;
-
+    }if(!S_ISDIR(infoDir.st_mode))return -1;
+    
     if((*dirToSave=find(dirToSaveName))==NULL){
         makeLocal(dirToSaveName,dirToSave);
         return 1;
@@ -293,10 +318,19 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     return 0;
 }
 
-
+/*
 LocalDir *gitcheck(LocalDir *dirToCheck)
 {//to be created
 }
 int gitcommit(LocalDir *dirToCommit)
 {//to be created
+}
+*/
+
+int main(int argv,char **argc){
+
+LocalDir *base=NULL;
+printf("%d",gitinit(argc[1],&base));
+
+return 0;
 }
