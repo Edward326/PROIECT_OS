@@ -28,7 +28,7 @@ int filesCount;
 
 typedef struct{
     char *directoryName;
-    ino_t dirIdent;
+    ino_t dirIdent;//cand cauta dupa dir verionat
     Entries *entry;
     int entryCount;
 }LocalDir;

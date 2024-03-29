@@ -1,17 +1,20 @@
 #include<stdio.h>
 #include<string.h>
 #include"gitStruct.h"
+#include<stdarg.h>
 
-
+//FCT DE CAUTARE A ELEMENTULUI IN BD E DEZACTIVATA ,fiidnca citirea elementelor i punerea lor in db ,pentru a fii citit ulterior pentru a se gasii daca folderul e versionat,citirea e corupta 
+//newEntryRead e bufferata 
 
 Entries* newEntryRead(int file){
+    
     Entries *elem=malloc(sizeof(Entries));
     
     int sizeString;
     read(file,&sizeString,sizeof(int));//CORRUPTION!!
-    elem->fileName=malloc(sizeString+1);   
+    elem->fileName=malloc(sizeString);   
     read(file,elem->fileName,sizeString);
-    elem->fileName[sizeString]='\0';
+    puts(elem->fileName);
     
     
     read(file,&elem->metadata->inodeNo,sizeof(ino_t)); 
@@ -37,8 +40,6 @@ void readFile(LocalDir *reff,struct dirent *i){
     strcpy(path,gitSaves);strcat(path,"/");strcat(path,i->d_name);
     strcat(path,"/");strcat(path,gitSavesFile);path[strlen(path)]='\0';
     
- 
-
     int file=open(path,O_RDWR);
     lseek(file,0,SEEK_SET);
 
@@ -47,11 +48,11 @@ read(file,&reff->dirIdent,sizeof(ino_t));
 read(file,&reff->entryCount,sizeof(int));
 reff->entry=NULL;
 if(reff->entryCount)
-{reff->entry=malloc(sizeof(Entries)*(reff->entryCount));}
-
+{reff->entry=malloc(sizeof(Entries)*(reff->entryCount));
 for(int i=0;i<reff->entryCount;i++)
     reff->entry[i]=*newEntryRead(file);
-
+}
+    
 close(file);
 }
 //--------------------------------------------------------fct pt incarcarea dir versionate din folderul gitSaves intr un database de dir vrsionate(folosite de gitLoad())
@@ -63,9 +64,9 @@ close(file);
 
 void writeFileRecc(int file,Entries newDir){
      
-    int size=strlen(newDir.fileName);
+    int size=strlen(newDir.fileName)+1;
 
-    write(file,&size,sizeof(int));   
+    write(file,&size,sizeof(int)); 
     write(file,newDir.fileName,size);
     write(file,&newDir.metadata->inodeNo,sizeof(ino_t)); 
     write(file,&newDir.metadata->type,sizeof(mode_t)); 
@@ -81,10 +82,11 @@ void writeFileRecc(int file,Entries newDir){
 }
 
 void writeFile(int file,LocalDir *newDir){
+
 write(file,&newDir->dirIdent,sizeof(ino_t));
 write(file,&newDir->entryCount,sizeof(int));
 for(int i=0;i<newDir->entryCount;i++)
-   writeFileRecc(file,newDir->entry[i]);
+  writeFileRecc(file,newDir->entry[i]);
 }
 //--------------------------------------------------------fct pt descarcarea noilor date despre dir versionat newDir in folderul gitSaves
 
@@ -93,12 +95,15 @@ for(int i=0;i<newDir->entryCount;i++)
 
 
 
-LocalDir **gitLoad(int *size){
+LocalDir **gitLoad(int *size){return NULL;
  struct stat trash;
     if(lstat(gitSaves,&trash)==-1)return NULL;//nu exista localSaves
   
-  LocalDir **array=NULL;DIR *dir;dir=opendir(gitSaves);int index=0;
+  LocalDir **array=NULL;DIR *dir;
+  if(!(dir=opendir(gitSaves)))return NULL;
+  int index=0;
   struct dirent *i;
+  
   while((i=readdir(dir))){
      if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
     array=realloc(array,(++index)*sizeof(LocalDir*));
@@ -122,10 +127,8 @@ LocalDir *find(char *dirToFind){
 if( !(database=gitLoad(&size)))return NULL;
 
 struct stat trash;
-char *path=malloc(strlen(gitSaves)+strlen(dirToFind)+1);
-strcpy(path,gitSaves);strcat(path,"/");strcat(path,dirToFind);path[strlen(path)]='\0';
+if(lstat(dirToFind,&trash)==-1)return NULL;//cautam dir in folerul de lucru
 
-if(lstat(path,&trash)==-1)return NULL;//dir nu exista in folderul gitSaves
 for(int i=0;i<size;i++){
     if(database[i]->dirIdent==trash.st_ino)
     return database[i];
@@ -156,7 +159,7 @@ void deleteDir(LocalDir *dirToDelete){
     if((path=malloc(strlen(gitSaves)+strlen(dirToDelete->directoryName)+2))==NULL)return;
     strcpy(path,gitSaves);strcat(path,"/");strcat(path,dirToDelete->directoryName);path[strlen(path)]='\0';
 
-    if(rmdir(path)){free(path);return;}
+    rmdir(path);
     free(path);
 }
 
@@ -173,12 +176,12 @@ void writeDir(LocalDir *newDir) {
       
     if (mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) == -1){free(path);return;}
 
-    if((path=realloc(path,strlen(gitSaves)+strlen(newDir->directoryName)+strlen(gitSavesFile)+3))==NULL)return;
+if((path=realloc(path,strlen(gitSaves)+strlen(newDir->directoryName)+strlen(gitSavesFile)+3))==NULL){free(path);return;}
     strcat(path,"/");strcat(path,gitSavesFile);path[strlen(path)]='\0';
   //puts(path);
 
     int fileDesc;
-    if((fileDesc=open(path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO))==-1){ free(path);return;}
+    if((fileDesc=open(path, O_RDWR | O_CREAT | O_TRUNC, 111111111))==-1){ free(path);return;}
     writeFile(fileDesc,newDir);
     close(fileDesc);
     free(path);
@@ -331,6 +334,9 @@ int main(int argv,char **argc){
 
 LocalDir *base=NULL;
 printf("%d",gitinit(argc[1],&base));
+for(int i=0;i<base->entryCount;i++){
+    printf("\n%d",base->entry[i].metadata->totalSize);
+}
 
 return 0;
 }
