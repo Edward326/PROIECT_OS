@@ -5,6 +5,43 @@
 
 //FCT DE CAUTARE A ELEMENTULUI IN BD E DEZACTIVATA ,fiidnca citirea elementelor i punerea lor in db ,pentru a fii citit ulterior pentru a se gasii daca folderul e versionat,citirea e corupta 
 //newEntryRead e bufferata 
+void printRec(Entries reff,int spacing){
+   
+     for(int j=0;j<spacing;j++)printf("\t");
+     puts(reff.fileName);
+      for(int j=0;j<spacing;j++)printf("\t");
+printf("inode: %d\n", reff.metadata->inodeNo);
+for(int j=0;j<spacing;j++)printf("\t");
+printf("totalsize: %d\n", reff.metadata->totalSize);
+for(int j=0;j<spacing;j++)printf("\t");
+printf("lastmodiff: %d\n", reff.metadata->timeLastModiff);
+
+     for(int j=0;j<spacing;j++)printf("\t");
+    if(S_ISREG(reff.metadata->type))printf("type:file\n");
+    else printf("type:dir\n");
+     for(int j=0;j<spacing;j++)printf("\t");
+    printf("filesContained:%d\n",reff.filesCount);
+    if(reff.filesCount){
+        for(int i=0;i<reff.filesCount;i++)
+        printRec(*reff.next[i],strlen(reff.fileName)+spacing+1);
+    }
+}
+
+void print(LocalDir *reff){
+puts(reff->directoryName);
+if(!reff->entryCount){printf("ID:%d\n",reff->dirIdent);printf("empty dir\n\n\n");}
+else printf("ID:%d\n\n\n",reff->dirIdent);
+for(int i=0;i<reff->entryCount;i++){
+printRec(reff->entry[i],0);
+printf("\n\n===============\n\n");
+}
+
+}
+//----------------------------------------------------fct de viz a dir versionat
+
+
+
+
 
 Entries* newEntryRead(int file){
     
@@ -92,7 +129,7 @@ for(int i=0;i<newDir->entryCount;i++)
 
 
 
-LocalDir *find(char *dirToFind){return NULL;
+LocalDir *find(char *dirToFind){//return NULL;
      struct stat trash,local;
     if(lstat(gitSaves,&trash)==-1)return NULL;//nu exista localSaves
     if(lstat(dirToFind,&local)==-1)return NULL;//nu exista localSaves
@@ -205,7 +242,9 @@ return newElem;
 Entries* newFileEntry(char *path,char *filename){
 
     Entries *elem=malloc(sizeof(Entries));
-    elem->fileName=filename;
+    elem->fileName=malloc(strlen(filename)+1);
+    strcpy(elem->fileName,filename);
+    strcpy(elem->fileName,filename);
     elem->metadata=newInternalData(path);
     elem->next=NULL;
     elem->filesCount=0;
@@ -225,7 +264,6 @@ Entries* newEntry(char *pathOriginal,char *filename){
     if(S_ISREG(info.st_mode)){
       Entries *reff=newFileEntry(path,filename);
       free(path);
-      //puts(filename);
       return reff;
     }
     else
@@ -279,6 +317,7 @@ void makeLocal(char *dirToSaveName,LocalDir **dirToSave){
     //copiaza metadatele in pt si le incarca in db
     *dirToSave=malloc(sizeof(LocalDir)); 
     loadCurrentDir(dirToSaveName,*dirToSave);
+    //print(*dirToSave);
     gitWrite(*dirToSave);
 }
 //--------------------------------------------------------fct pt a incarca datele despre toate fisierele din dir local(nu se cauta in gitSaves),aici se vad ultimele modiff
@@ -296,8 +335,10 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     
     if((*dirToSave=find(dirToSaveName))==NULL){
         makeLocal(dirToSaveName,dirToSave);
+        print(*dirToSave);
         return 1;
     }
+    print(*dirToSave);
     return 0;
 }
 
