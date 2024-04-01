@@ -1,7 +1,6 @@
 #ifndef GITSTRUCT
 #define GITSTRUCT
 
-//lib de sistem
 #include<dirent.h>
 #include<sys/types.h>
 #include<sys/stat.h>
@@ -13,36 +12,34 @@
 #define gitSavesFile "metadata.bin"
 
 typedef struct{
-    ino_t inodeNo;
-    mode_t type;
-    off_t totalSize;
-    struct timespec timeLastModiff;   /* time of last modification */ 
+    ino_t inodeNo;// id INODE
+    mode_t type;  //tipu fisierului
+    off_t totalSize; //DIMENSIUNEA TOTALA
+    struct timespec timeLastModiff;   //(SEC) UKLTIMA DATA A MODIFFICARII FIS/DIR
 }internalData;
 
 typedef struct Entries{
-char *fileName;
+char *fileName;                //numele fisierului
 internalData *metadata;
-struct Entries **next;
-int filesCount;
+struct Entries **next;         //daca e dir contine alte fisiere/dir
+int filesCount;                //cate alte elemente contine(daca e dir)
 }Entries;
 
 typedef struct{
-    char *directoryName;
-    ino_t dirIdent;//cand cauta dupa dir verionat
-    Entries *entry;
-    int entryCount;
+    char *directoryName;            //numele directorui versionat
+    ino_t dirIdent;                 //id INODE ,nu se schimba nciioidata
+    Entries *entry;                 //intrarile continute de el
+    int entryCount;                 //nr de intrari
 }LocalDir;
 
 
 int gitinit(char *dirToSaveName,LocalDir **dirToSave);
-//-1 nu exista directorul in calea curenta(unde se afla fisierul de unde sunt executate fct astea) sau fis nu e director
+//1-nu exista directorul in calea curenta(unde se afla fisierul de unde sunt executate fct astea) sau fis nu e director
 //0-daca fisierul e deja versionat 
 //1-daca fisierul nu e versionat s-a salvat vers curenta a lui
-//fct lucreaza pe dirToSave ,iar daca e cazul 0,1 va retine un pt catre directorul trackuit(la care i s a creat deja o vers/snapshot)
-LocalDir *gitcheck(LocalDir *dirToCheck);
-//!null =nu s-au gasit modiff
-//null =s-au gasit modiff si  noul snapshot e returnat
-int gitcommit(LocalDir *dirToCommit);
-//1 daca s a salvat un snapshot diferit ,0daca nu s a detectat nicio schimbare
-//combinat gitinit(argc[1],&dir);gitcommit(gitcheck(dir));vede daca dir argc[1] exista si e deja versionat daca nu il versioneaza 
+//fct lucreaza pe dirToSave ,in dirToSave se puine mereu dir gasit(nou creat/deja versionat)
+
+int gitcommit(char *dirToSaveName,LocalDir *dirVersionated);
+//1-daca s a salvat un snapshot diferit(s-au gasit modiff)
+//0-daca nu s a detectat nicio schimbare
 #endif

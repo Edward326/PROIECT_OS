@@ -14,9 +14,8 @@ Entries* newEntryRead(int file){
     read(file,&sizeString,sizeof(int));//CORRUPTION!!
     elem->fileName=malloc(sizeString);   
     read(file,elem->fileName,sizeString);
-    puts(elem->fileName);
-    
-    
+    //puts(elem->fileName);
+
     read(file,&elem->metadata->inodeNo,sizeof(ino_t)); 
     read(file,&elem->metadata->type,sizeof(mode_t)); 
     read(file,&elem->metadata->totalSize,sizeof(off_t)); 
@@ -34,14 +33,14 @@ Entries* newEntryRead(int file){
 }
 
 void readFile(LocalDir *reff,struct dirent *i){
-
+    
     char *path;
     path=malloc(strlen(gitSaves)+strlen(i->d_name)+strlen(gitSavesFile)+3);
     strcpy(path,gitSaves);strcat(path,"/");strcat(path,i->d_name);
     strcat(path,"/");strcat(path,gitSavesFile);path[strlen(path)]='\0';
     
-    int file=open(path,O_RDWR);
-    lseek(file,0,SEEK_SET);
+    int file=open(path,O_RDONLY);
+    //lseek(file,0,SEEK_SET);
 
 reff->directoryName=i->d_name;
 read(file,&reff->dirIdent,sizeof(ino_t));
@@ -56,7 +55,6 @@ for(int i=0;i<reff->entryCount;i++)
 close(file);
 }
 //--------------------------------------------------------fct pt incarcarea dir versionate din folderul gitSaves intr un database de dir vrsionate(folosite de gitLoad())
-
 
 
 
@@ -94,51 +92,35 @@ for(int i=0;i<newDir->entryCount;i++)
 
 
 
-
-LocalDir **gitLoad(int *size){return NULL;
- struct stat trash;
+LocalDir *find(char *dirToFind){return NULL;
+     struct stat trash,local;
     if(lstat(gitSaves,&trash)==-1)return NULL;//nu exista localSaves
-  
-  LocalDir **array=NULL;DIR *dir;
-  if(!(dir=opendir(gitSaves)))return NULL;
-  int index=0;
+    if(lstat(dirToFind,&local)==-1)return NULL;//nu exista localSaves
+    DIR *dir;
+    if(!(dir=opendir(gitSaves)))return NULL;
+
   struct dirent *i;
-  
-  while((i=readdir(dir))){
+  char *path=NULL;
+while((i=readdir(dir))){
      if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
-    array=realloc(array,(++index)*sizeof(LocalDir*));
-    array[index-1]=malloc(sizeof(LocalDir));
-    readFile(array[index-1],i);
+    path=malloc(strlen(gitSaves)+strlen(i->d_name)+strlen(gitSavesFile)+3);
+    strcpy(path,gitSaves);strcat(path,"/");strcat(path,i->d_name);
+    strcat(path,"/");strcat(path,gitSavesFile);path[strlen(path)]='\0';
+    int fd=open(path,O_RDONLY);
+    read(fd,&trash.st_ino,sizeof(ino_t));close(fd);
+    if(trash.st_ino==local.st_ino){
+        LocalDir *reff=malloc(sizeof(LocalDir));
+        readFile(reff,i);
+        free(path);
+        closedir(dir);
+        return reff;
+    } 
+    free(path);
   }
-  *size=index;
   closedir(dir);
-return array;
-}
-//--------------------------------------------------------fct pt incarcarea tuturor dir urilor versionate intr un dataBase returneza un array de dir versionate,si specifica cate sunt in size
-
-
-
-
-
-
-LocalDir *find(char *dirToFind){
-    LocalDir **database;
-    int size=0;
-if( !(database=gitLoad(&size)))return NULL;
-
-struct stat trash;
-if(lstat(dirToFind,&trash)==-1)return NULL;//cautam dir in folerul de lucru
-
-for(int i=0;i<size;i++){
-    if(database[i]->dirIdent==trash.st_ino)
-    return database[i];
-}
-//poate are acelasi nume dar iNode differit
 return NULL;
 }
 //--------------------------------------------------------fct pt cautarea unui dir pentru a vedea daca el e versionat(il cauta in database generate de gitLoad())
-
-
 
 
 
@@ -194,13 +176,11 @@ LocalDir *copy;
         writeDir(newDir);
     }else
     {
-        deleteDir(newDir);
+        deleteDir(copy);
         writeDir(newDir);
     }
 }
 //--------------------------------------------------------fct pt descarcarea noilor date in gitSaves(daca nu dir nu e versionat se creeaza prima vers a lui),daca nu se sterge si se inlocuiseste cu cea noua
-
-
 
 
 
@@ -322,21 +302,24 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
 }
 
 /*
-LocalDir *gitcheck(LocalDir *dirToCheck)
-{//to be created
-}
-int gitcommit(LocalDir *dirToCommit)
+int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
 {//to be created
 }
 */
 
+
+
+
+
+
+
+
+
+//testunit
 int main(int argv,char **argc){
 
 LocalDir *base=NULL;
 printf("%d",gitinit(argc[1],&base));
-for(int i=0;i<base->entryCount;i++){
-    printf("\n%d",base->entry[i].metadata->totalSize);
-}
 
 return 0;
 }
