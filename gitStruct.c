@@ -6,36 +6,67 @@
 //FCT DE CAUTARE A ELEMENTULUI IN BD E DEZACTIVATA ,fiidnca citirea elementelor i punerea lor in db ,pentru a fii citit ulterior pentru a se gasii daca folderul e versionat,citirea e corupta 
 //newEntryRead e bufferata 
 void printRec(Entries reff,int spacing){
-   
-     for(int j=0;j<spacing;j++)printf("\t");
-     puts(reff.fileName);
-      for(int j=0;j<spacing;j++)printf("\t");
-printf("inode: %d\n", reff.metadata->inodeNo);
-for(int j=0;j<spacing;j++)printf("\t");
-printf("totalsize: %d\n", reff.metadata->totalSize);
-for(int j=0;j<spacing;j++)printf("\t");
-printf("lastmodiff: %d\n", reff.metadata->timeLastModiff);
+      printf("\n");
 
      for(int j=0;j<spacing;j++)printf("\t");
-    if(S_ISREG(reff.metadata->type))printf("type:file\n");
-    else printf("type:dir\n");
+    printf("filename: \e[1;35m");
+     puts(reff.fileName);
+     
+     printf("\e[1;37m");
+     
+      for(int j=0;j<spacing;j++)printf("\t");
+printf("inode: \e[1;31m%d\n", reff.metadata->inodeNo);
+
+printf("\e[1;37m");
+
+for(int j=0;j<spacing;j++)printf("\t");
+printf("totalsize: \e[1;32m%d\n", reff.metadata->totalSize);
+
+printf("\e[1;37m");
+
+for(int j=0;j<spacing;j++)printf("\t");
+printf("lastmodiff: \e[4;37m");
+ time_t t = reff.metadata->timeLastModiff.tv_sec;
+    struct tm *local_time = localtime(&t);
+    if (local_time != NULL) {
+        char buffer[80];
+        strftime(buffer, sizeof(buffer),"%Y-%m-%d %H:%M:%S", local_time);
+        puts(buffer);
+    } else {
+        printf("Failed to convert timespec to date.\n");
+    }
+
+printf("\e[0;37m\e[1;37m");
+
+     for(int j=0;j<spacing;j++)printf("\t");
+    if(S_ISREG(reff.metadata->type))printf("type: \e[1;31mFILE\n");
+    else printf("type: \e[1;31mDIR\n");
+
+    printf("\e[1;37m");
+
      for(int j=0;j<spacing;j++)printf("\t");
     printf("filesContained:%d\n",reff.filesCount);
+    
     if(reff.filesCount){
         for(int i=0;i<reff.filesCount;i++)
-        printRec(*reff.next[i],strlen(reff.fileName)+spacing+1);
+        printRec(*reff.next[i],spacing+2);
     }
 }
 
 void print(LocalDir *reff){
-puts(reff->directoryName);
-if(!reff->entryCount){printf("ID:%d\n",reff->dirIdent);printf("empty dir\n\n\n");}
-else printf("ID:%d\n\n\n",reff->dirIdent);
+    if(!reff){perror("uninitilized DIR,maybe its NULL");return;}
+    printf("\n\e[1;37m");printf("DirVersionated saved with name\e[1;32m ");
+puts(reff->directoryName);printf("\e[1;37m");
+if(!reff->entryCount){printf("ID:\e[1;31m%d\n",reff->dirIdent);printf("\e[1;33mempty dir\n\n\n");}
+else printf("ID:\e[1;31m%d\e[1;37m\n\n\n",reff->dirIdent);
 for(int i=0;i<reff->entryCount;i++){
 printRec(reff->entry[i],0);
-printf("\n\n===============\n\n");
+if(i+1!=reff->entryCount)
+printf("\e[0;37m\n\n===============\n\n\e[1;37m");
+else
+printf("\n\n");
 }
-
+printf("\e[0;37m");
 }
 //----------------------------------------------------fct de viz a dir versionat
 
@@ -46,13 +77,14 @@ printf("\n\n===============\n\n");
 Entries* newEntryRead(int file){
     
     Entries *elem=malloc(sizeof(Entries));
+    elem->metadata=malloc(sizeof(internalData));
     
     int sizeString;
     read(file,&sizeString,sizeof(int));//CORRUPTION!!
     elem->fileName=malloc(sizeString);   
     read(file,elem->fileName,sizeString);
     //puts(elem->fileName);
-
+     
     read(file,&elem->metadata->inodeNo,sizeof(ino_t)); 
     read(file,&elem->metadata->type,sizeof(mode_t)); 
     read(file,&elem->metadata->totalSize,sizeof(off_t)); 
@@ -85,8 +117,9 @@ read(file,&reff->entryCount,sizeof(int));
 reff->entry=NULL;
 if(reff->entryCount)
 {reff->entry=malloc(sizeof(Entries)*(reff->entryCount));
+
 for(int i=0;i<reff->entryCount;i++)
-    reff->entry[i]=*newEntryRead(file);
+   reff->entry[i]=*newEntryRead(file);
 }
     
 close(file);
@@ -335,10 +368,10 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     
     if((*dirToSave=find(dirToSaveName))==NULL){
         makeLocal(dirToSaveName,dirToSave);
-        print(*dirToSave);
+        //print(*dirToSave);
         return 1;
     }
-    print(*dirToSave);
+    //print(*dirToSave);
     return 0;
 }
 
@@ -360,7 +393,8 @@ int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
 int main(int argv,char **argc){
 
 LocalDir *base=NULL;
-printf("%d",gitinit(argc[1],&base));
-
+printf("VERSIONATED?:%d\n\n",gitinit(argc[1],&base));
+int aux;scanf("%d",&aux);
+print(base);
 return 0;
 }
