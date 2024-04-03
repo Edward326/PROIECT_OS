@@ -206,12 +206,18 @@ void deleteDir(LocalDir *dirToDelete){
     closedir(dir);
 
     if(!i)return;//not finded
-
     char *path;
     if((path=malloc(strlen(gitSaves)+strlen(dirToDelete->directoryName)+2))==NULL)return;
     strcpy(path,gitSaves);strcat(path,"/");strcat(path,dirToDelete->directoryName);path[strlen(path)]='\0';
 
+    char *pathFile;
+    if((pathFile=malloc(strlen(gitSaves)+strlen(dirToDelete->directoryName)+strlen(gitSavesFile)+3))==NULL){free(pathFile);free(path);return;}
+     strcpy(pathFile,gitSaves);strcat(pathFile,"/");strcat(pathFile,dirToDelete->directoryName);strcat(pathFile,"/");
+     strcat(pathFile,gitSavesFile);pathFile[strlen(pathFile)]='\0';
+
+    if(remove(pathFile))printf("eroare");
     rmdir(path);
+    free(pathFile);
     free(path);
 }
 
@@ -277,7 +283,6 @@ Entries* newFileEntry(char *path,char *filename){
     Entries *elem=malloc(sizeof(Entries));
     elem->fileName=malloc(strlen(filename)+1);
     strcpy(elem->fileName,filename);
-    strcpy(elem->fileName,filename);
     elem->metadata=newInternalData(path);
     elem->next=NULL;
     elem->filesCount=0;
@@ -290,7 +295,6 @@ Entries* newEntry(char *pathOriginal,char *filename){
     strcpy(path,pathOriginal);strcat(path,"/");
     strcat(path,filename);path[strlen(path)]='\0';
     
-
     struct stat info;
     if(lstat(path,&info)==-1)return NULL;
 
@@ -302,7 +306,8 @@ Entries* newEntry(char *pathOriginal,char *filename){
     else
     if(S_ISDIR(info.st_mode)){
         Entries *elem=malloc(sizeof(Entries));
-       elem->fileName=filename;
+       elem->fileName=malloc(strlen(filename)+1);
+    strcpy(elem->fileName,filename);
        elem->metadata=newInternalData(path);
        elem->next=NULL;
        elem->filesCount=0;
@@ -328,9 +333,11 @@ Entries* newEntry(char *pathOriginal,char *filename){
 
 void loadCurrentDir(char *dirToSaveName,LocalDir *dirToSave){
     DIR *dir;if(!(dir=opendir(dirToSaveName)))return;
-
+    
     int index=0;
-    dirToSave->directoryName=dirToSaveName;
+    dirToSave->directoryName=malloc(strlen(dirToSaveName)+1);
+    strcpy(dirToSave->directoryName,dirToSaveName);
+    
     struct stat inf;
        if(lstat(dirToSaveName,&inf)==-1)return;
     dirToSave->dirIdent=inf.st_ino;
@@ -374,12 +381,51 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     //print(*dirToSave);
     return 0;
 }
-
-/*
-int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
-{//to be created
+int compare(Entries *newVers,Entries *oldVers){
+if(strcmp(newVers->fileName,oldVers->fileName)){
+        return 1;
 }
-*/
+ if(newVers->filesCount!=oldVers->filesCount)
+        return 1;
+if(newVers->metadata->totalSize!=oldVers->metadata->totalSize)
+        return 1;
+if(newVers->metadata->timeLastModiff.tv_sec!=oldVers->metadata->timeLastModiff.tv_sec)
+        return 1;
+if(newVers->filesCount)
+{
+    for(int i=0;i<newVers->filesCount;i++)
+   return compare(newVers->next[i],oldVers->next[i]);
+}
+
+return 0;
+}
+int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
+{
+    if(!dirVersionated)return 0;
+
+    char *name=malloc(strlen(dirVersionated->directoryName)+1);
+    strcpy(name,dirVersionated->directoryName);
+
+    LocalDir *dirNewVers=malloc(sizeof(LocalDir));
+    loadCurrentDir(dirToSaveName,dirNewVers);
+    
+    dirVersionated->directoryName=name;
+   
+    if(strcmp(dirNewVers->directoryName,dirVersionated->directoryName)){
+        gitWrite(dirNewVers);
+        return 1;}
+        if(dirNewVers->entryCount!=dirVersionated->entryCount){
+        gitWrite(dirNewVers);
+        return 1;}
+        for(int i=0;i<dirNewVers->entryCount;i++){
+        if(compare(&dirNewVers->entry[i],&dirVersionated->entry[i])){
+           puts(dirVersionated->entry[i].fileName);
+        gitWrite(dirNewVers);
+        return 1;}
+        }
+        
+return 0;
+}
 
 
 
@@ -389,12 +435,50 @@ int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
 
 
 
-//testunit
-int main(int argv,char **argc){
+
+
+void versionate(char *argc){
 
 LocalDir *base=NULL;
-printf("VERSIONATED?:%d\n\n",gitinit(argc[1],&base));
-int aux;scanf("%d",&aux);
-print(base);
+int verify=gitinit(argc,&base);
+
+printf("\n");
+if(verify==-1){printf("eroare\n");return;}
+
+if(verify==1){printf("dir versionat\n");return;}
+
+else{
+printf("dir already versionated,finding possible modifies\n\n");
+if(gitcommit(argc,base)){printf("\n\n\e[1;31mmodifies found\e[0;37m\ntype y/n to see changes:\t");
+char opt;scanf("%c",&opt);
+if(opt=='y'){
+    printf("\n\n\n\e[1;31OLD VERS VERS\e[0;37m\n\n\n");
+    print(base);
+    printf("\n\n\n\e[1;31NEW VERS VERS\e[0;37m\n\n\n");
+     LocalDir *dirNewVers=malloc(sizeof(LocalDir));
+    loadCurrentDir(argc,dirNewVers);
+    print(dirNewVers);
+}
+printf("\n\n");
+}
+else
+printf("\e[1;32mdir is clear,nothing to be modified\e[0;37m\n");
+}
+}
+int parc(char **argc,char *cargc,int stop){
+ for(int j=0;j<stop;j++){
+        if(strcmp(argc[j],cargc)==0)return 1;
+    }
+return 0;
+}
+//testunit
+int main(int argv,char **argc){
+if(argv>11){printf("too much arg to process");return 0;}
+for(int i=1;i<argv;i++){
+   if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
+    versionate(argc[i]);  //daca nu activeasa fct de versionare
+    printf("\n\n");
+}
+
 return 0;
 }

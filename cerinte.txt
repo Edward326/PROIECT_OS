@@ -6,4 +6,5 @@ cerinta sapt6:
 dai in linia de comanda o cale catre un dir sau un dir si ,daca exista si e dir se creeaza o versiune a lui(se versioneaza)
 
 cerinta sapt7:
-
+oricate fisiere de vers pana in 10,si sa salvam modiff daca sunt
+mai primim inca un nume de folder in care salvam vers
