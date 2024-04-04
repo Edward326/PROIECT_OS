@@ -33,13 +33,15 @@ typedef struct{
 }LocalDir;
 
 
+void print(LocalDir *reff);//prints the vers dir stored in reff 
+
 int gitinit(char *dirToSaveName,LocalDir **dirToSave);
-//1-nu exista directorul in calea curenta(unde se afla fisierul de unde sunt executate fct astea) sau fis nu e director
-//0-daca fisierul e deja versionat 
+//-1 -nu exista directorul in calea curenta(unde se afla fisierul de unde sunt executate fct astea) sau fis nu e director
+//0 -daca fisierul e deja versionat 
 //1-daca fisierul nu e versionat s-a salvat vers curenta a lui
 //fct lucreaza pe dirToSave ,in dirToSave se puine mereu dir gasit(nou creat/deja versionat)
 
 int gitcommit(char *dirToSaveName,LocalDir *dirVersionated);
-//1-daca s a salvat un snapshot diferit(s-au gasit modiff)
+//1-daca s a salvat un snapshot diferit(s-au gasit modiff si s-a salvat noua vers automat) 
 //0-daca nu s a detectat nicio schimbare
 #endif

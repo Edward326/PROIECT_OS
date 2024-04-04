@@ -2,12 +2,11 @@
 #include<string.h>
 #include"gitStruct.h"
 #include<stdarg.h>
+#define maxDirToVers 10
 
-//FCT DE CAUTARE A ELEMENTULUI IN BD E DEZACTIVATA ,fiidnca citirea elementelor i punerea lor in db ,pentru a fii citit ulterior pentru a se gasii daca folderul e versionat,citirea e corupta 
-//newEntryRead e bufferata 
 void printRec(Entries reff,int spacing){
-      printf("\n");
 
+      printf("\n");
      for(int j=0;j<spacing;j++)printf("\t");
     printf("filename: \e[1;35m");
      puts(reff.fileName);
@@ -41,7 +40,6 @@ printf("\e[0;37m\e[1;37m");
      for(int j=0;j<spacing;j++)printf("\t");
     if(S_ISREG(reff.metadata->type))printf("type: \e[1;31mFILE\n");
     else printf("type: \e[1;31mDIR\n");
-
     printf("\e[1;37m");
 
      for(int j=0;j<spacing;j++)printf("\t");
@@ -53,9 +51,15 @@ printf("\e[0;37m\e[1;37m");
     }
 }
 
+
+
+
+
+//=======================================================functs to be accesed outside the implementation
 void print(LocalDir *reff){
+    printf("\n\n");
     if(!reff){perror("uninitilized DIR,maybe its NULL");return;}
-    printf("\n\e[1;37m");printf("DirVersionated saved with name\e[1;32m ");
+    printf("\e[1;37m");printf("DirVersionated saved with name\e[1;32m ");
 puts(reff->directoryName);printf("\e[1;37m");
 if(!reff->entryCount){printf("ID:\e[1;31m%d\n",reff->dirIdent);printf("\e[1;33mempty dir\n\n\n");}
 else printf("ID:\e[1;31m%d\e[1;37m\n\n\n",reff->dirIdent);
@@ -69,11 +73,35 @@ printf("\n\n");
 printf("\e[0;37m");
 }
 //----------------------------------------------------fct de viz a dir versionat
+void freeLibRec(Entries *elem){
+free(elem->fileName);elem->fileName=NULL;
+free(elem->metadata);elem->metadata=NULL;
+
+if(elem->filesCount){
+for(int i=0;i<elem->filesCount;i++){
+    freeLibRec(elem->next[i]);
+    elem->next[i]=NULL;
+}
+free(elem->next);elem->next=NULL;
+}
+
+}
+void freeLib(LocalDir **dir){
+    //free((*dir)->directoryName);
+    //printf("%s",(*dir)->directoryName);
+    (*dir)->directoryName=NULL;
+    for(int i=0;i<(*dir)->entryCount;i++){
+        freeLibRec(&(*dir)->entry[i]);
+    }
+ free(*dir);
+ *dir=NULL;
+}
 
 
 
 
 
+//=======================================================functs not to be accesed outside the implementation
 Entries* newEntryRead(int file){
     
     Entries *elem=malloc(sizeof(Entries));
@@ -100,7 +128,6 @@ Entries* newEntryRead(int file){
     }
     return elem;
 }
-
 void readFile(LocalDir *reff,struct dirent *i){
     
     char *path;
@@ -125,11 +152,6 @@ for(int i=0;i<reff->entryCount;i++)
 close(file);
 }
 //--------------------------------------------------------fct pt incarcarea dir versionate din folderul gitSaves intr un database de dir vrsionate(folosite de gitLoad())
-
-
-
-
-
 void writeFileRecc(int file,Entries newDir){
      
     int size=strlen(newDir.fileName)+1;
@@ -157,11 +179,6 @@ for(int i=0;i<newDir->entryCount;i++)
   writeFileRecc(file,newDir->entry[i]);
 }
 //--------------------------------------------------------fct pt descarcarea noilor date despre dir versionat newDir in folderul gitSaves
-
-
-
-
-
 LocalDir *find(char *dirToFind){//return NULL;
      struct stat trash,local;
     if(lstat(gitSaves,&trash)==-1)return NULL;//nu exista localSaves
@@ -191,11 +208,6 @@ while((i=readdir(dir))){
 return NULL;
 }
 //--------------------------------------------------------fct pt cautarea unui dir pentru a vedea daca el e versionat(il cauta in database generate de gitLoad())
-
-
-
-
-
 void deleteDir(LocalDir *dirToDelete){
     struct stat trash;
     if(lstat(gitSaves,&trash)==-1)return;
@@ -220,7 +232,6 @@ void deleteDir(LocalDir *dirToDelete){
     free(pathFile);
     free(path);
 }
-
 void writeDir(LocalDir *newDir) {
     struct stat trash;
     if (lstat(gitSaves, &trash) == -1) {
@@ -253,15 +264,11 @@ LocalDir *copy;
     }else
     {
         deleteDir(copy);
+        freeLib(&copy);
         writeDir(newDir);
     }
 }
 //--------------------------------------------------------fct pt descarcarea noilor date in gitSaves(daca nu dir nu e versionat se creeaza prima vers a lui),daca nu se sterge si se inlocuiseste cu cea noua
-
-
-
-
-
 internalData* newInternalData(char *path){
     struct stat info;
 if(lstat(path,&info)==-1)return NULL;
@@ -277,7 +284,6 @@ newElem->totalSize=info.st_size;
 
 return newElem;
 }
-
 Entries* newFileEntry(char *path,char *filename){
 
     Entries *elem=malloc(sizeof(Entries));
@@ -288,7 +294,6 @@ Entries* newFileEntry(char *path,char *filename){
     elem->filesCount=0;
     return elem;
 }
-
 Entries* newEntry(char *pathOriginal,char *filename){
     
     char *path=malloc(strlen(pathOriginal)+strlen(filename)+2);
@@ -330,7 +335,6 @@ Entries* newEntry(char *pathOriginal,char *filename){
     return NULL;
     
 }
-
 void loadCurrentDir(char *dirToSaveName,LocalDir *dirToSave){
     DIR *dir;if(!(dir=opendir(dirToSaveName)))return;
     
@@ -352,7 +356,6 @@ while((i=readdir(dir))){
 dirToSave->entryCount=index;
 closedir(dir);
 }
-
 void makeLocal(char *dirToSaveName,LocalDir **dirToSave){
     //copiaza metadatele in pt si le incarca in db
     *dirToSave=malloc(sizeof(LocalDir)); 
@@ -361,6 +364,24 @@ void makeLocal(char *dirToSaveName,LocalDir **dirToSave){
     gitWrite(*dirToSave);
 }
 //--------------------------------------------------------fct pt a incarca datele despre toate fisierele din dir local(nu se cauta in gitSaves),aici se vad ultimele modiff
+int compare(Entries *newVers,Entries *oldVers){
+if(strcmp(newVers->fileName,oldVers->fileName)){
+        return 1;
+}
+ if(newVers->filesCount!=oldVers->filesCount)
+        return 1;
+if(newVers->metadata->totalSize!=oldVers->metadata->totalSize)
+        return 1;
+if(newVers->metadata->timeLastModiff.tv_sec!=oldVers->metadata->timeLastModiff.tv_sec)
+        return 1;
+if(newVers->filesCount)
+{
+    for(int i=0;i<newVers->filesCount;i++)
+   return compare(newVers->next[i],oldVers->next[i]);
+}
+
+return 0;
+}
 
 
 
@@ -381,24 +402,7 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave){
     //print(*dirToSave);
     return 0;
 }
-int compare(Entries *newVers,Entries *oldVers){
-if(strcmp(newVers->fileName,oldVers->fileName)){
-        return 1;
-}
- if(newVers->filesCount!=oldVers->filesCount)
-        return 1;
-if(newVers->metadata->totalSize!=oldVers->metadata->totalSize)
-        return 1;
-if(newVers->metadata->timeLastModiff.tv_sec!=oldVers->metadata->timeLastModiff.tv_sec)
-        return 1;
-if(newVers->filesCount)
-{
-    for(int i=0;i<newVers->filesCount;i++)
-   return compare(newVers->next[i],oldVers->next[i]);
-}
 
-return 0;
-}
 int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
 {
     if(!dirVersionated)return 0;
@@ -423,7 +427,7 @@ int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
         gitWrite(dirNewVers);
         return 1;}
         }
-        
+freeLib(&dirNewVers);  
 return 0;
 }
 
@@ -437,32 +441,46 @@ return 0;
 
 
 
-void versionate(char *argc){
-
+void versionate(char *argc,int view){
+    if(view){
 LocalDir *base=NULL;
 int verify=gitinit(argc,&base);
 
 printf("\n");
-if(verify==-1){printf("eroare\n");return;}
 
-if(verify==1){printf("dir versionat\n");return;}
+if(verify==-1){printf("dir doesnt exists/path not redirecting to a dir type file\n\n");return;}
+
+if(verify==1){printf("dir versionat\n\n");return;}
 
 else{
 printf("dir already versionated,finding possible modifies\n\n");
-if(gitcommit(argc,base)){printf("\n\n\e[1;31mmodifies found\e[0;37m\ntype y/n to see changes:\t");
-char opt;scanf("%c",&opt);
+
+if(gitcommit(argc,base)){
+printf("\n\e[1;31mmodifies found\e[0;37m\ntype y/n to see changes:\t");
+char opt;scanf("%c",&opt);printf("\n");
 if(opt=='y'){
-    printf("\n\n\n\e[1;31OLD VERS VERS\e[0;37m\n\n\n");
+    printf("\n\n\e[1;31OLD VERS VERS\e[0;37m\n");
     print(base);
-    printf("\n\n\n\e[1;31NEW VERS VERS\e[0;37m\n\n\n");
+    printf("\n\n\e[1;31NEW VERS VERS\e[0;37m\n");
      LocalDir *dirNewVers=malloc(sizeof(LocalDir));
     loadCurrentDir(argc,dirNewVers);
     print(dirNewVers);
+    freeLib(&dirNewVers);
 }
+else
 printf("\n\n");
 }
 else
 printf("\e[1;32mdir is clear,nothing to be modified\e[0;37m\n");
+}
+ printf("\n\n");
+}
+else
+{
+    LocalDir *base=NULL;
+gitinit(argc,&base);
+gitcommit(argc,base);
+freeLib(&base);
 }
 }
 int parc(char **argc,char *cargc,int stop){
@@ -473,11 +491,11 @@ return 0;
 }
 //testunit
 int main(int argv,char **argc){
-if(argv>11){printf("too much arg to process");return 0;}
+
+if(argv>maxDirToVers+1){printf("too much arg to process");return 0;}
 for(int i=1;i<argv;i++){
    if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
-    versionate(argc[i]);  //daca nu activeasa fct de versionare
-    printf("\n\n");
+    versionate(argc[i],1);  //daca nu activeasa fct de versionare  
 }
 
 return 0;
