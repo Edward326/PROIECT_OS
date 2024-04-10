@@ -493,30 +493,37 @@ return 0;
 int main(int argv,char **argc){
 
 if(argv>maxDirToVers+1){printf("too much arg to process");exit(0);}//daca sunt prea multe argumente
+
 pid_t idProc;
-for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inca odata si exista si e dir creeam un proces nou(in care vers dir respectiv)
+for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inca odata si exista si e dir creeam un proces nou(in care vers dir respectiv),toate procesele astea facandu se in paralel
+   
    if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
     struct stat infoDir;
     if(lstat(argc[i],&infoDir)==-1)continue;
-    if(!S_ISDIR(infoDir.st_mode))continue;
+    if(!S_ISDIR(infoDir.st_mode))continue;//verificam sa exsiste argumentul si sa fie director ca sa putem sa i creeam proces sa l versionam
     
     
     if((idProc=fork())==-1)exit(-1);
     
     if(!idProc){
-    versionate(argc[i],0);  //daca nu activeasa fct de versionare
+    versionate(argc[i],0);//doar daca suntem in fiu atunci il veriosnam si terminam procesul
     exit(0);
     }
 }
 
+
 if(idProc){
+
 int status;
-wait(&status);
+wait(&status);//la final procesul tata(creator al tuturor celorlalte procese,in care se vers dir) primeste codul de terminare de la fiecare proces al lui,ca mai apoi sa le inchida
+
 if(WIFEXITED(status)){
+
 if(WEXITSTATUS(status))
 printf("program terminated abnormally");
 else
 printf("program terminated succesfully");
+
 }
 else
 printf("program terminated abnormally");
