@@ -1,8 +1,5 @@
-#include<stdio.h>
-#include<string.h>
+#include<stdio.h>//pt fct de printf
 #include"gitStruct.h"
-#include<stdarg.h>
-#define maxDirToVers 10
 
 void printRec(Entries reff,int spacing){
 
@@ -89,6 +86,7 @@ free(elem->next);elem->next=NULL;
 void freeLib(LocalDir **dir){
     //free((*dir)->directoryName);
     //printf("%s",(*dir)->directoryName);
+    if(!*dir)return;
     (*dir)->directoryName=NULL;
     for(int i=0;i<(*dir)->entryCount;i++){
         freeLibRec(&(*dir)->entry[i]);
@@ -431,25 +429,12 @@ freeLib(&dirNewVers);
 return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
 void versionate(char *argc,int view){
+   LocalDir *base=NULL;
     if(view){
-LocalDir *base=NULL;
 int verify=gitinit(argc,&base);
-
 printf("\n");
-
 if(verify==-1){printf("dir doesnt exists/path not redirecting to a dir type file\n\n");return;}
-
 if(verify==1){printf("dir versionat\n\n");return;}
 
 else{
@@ -477,12 +462,12 @@ printf("\e[1;32mdir is clear,nothing to be modified\e[0;37m\n");
 }
 else
 {
-    LocalDir *base=NULL;
 gitinit(argc,&base);
 gitcommit(argc,base);
+}
 freeLib(&base);
 }
-}
+/*
 int parc(char **argc,char *cargc,int stop){
  for(int j=0;j<stop;j++){
         if(strcmp(argc[j],cargc)==0)return 1;
@@ -531,4 +516,4 @@ printf("\n");
 }
 
 return 0;
-}
+}*/

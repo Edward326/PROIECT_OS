@@ -9,6 +9,8 @@
 #include<unistd.h>
 #include<time.h>
 #include<sys/wait.h>
+#include<string.h>
+#include<stdarg.h>
 #define gitSaves "localSaves"
 #define gitSavesFile "metadata.bin"
 
@@ -45,4 +47,9 @@ int gitinit(char *dirToSaveName,LocalDir **dirToSave);
 int gitcommit(char *dirToSaveName,LocalDir *dirVersionated);
 //1-daca s a salvat un snapshot diferit(s-au gasit modiff si s-a salvat noua vers automat) 
 //0-daca nu s a detectat nicio schimbare
+
+void versionate(char *argc,int typeOfview);
+//typeofView 
+//0- vers, explicit cu afisarea schimbarilor
+//1- vers, fara afisarea schimbarilor,fara nicio afisare
 #endif
