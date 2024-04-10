@@ -8,6 +8,7 @@
 #include<stdlib.h>
 #include<unistd.h>
 #include<time.h>
+#include<sys/wait.h>
 #define gitSaves "localSaves"
 #define gitSavesFile "metadata.bin"
 

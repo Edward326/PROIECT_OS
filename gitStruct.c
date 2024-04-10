@@ -492,10 +492,35 @@ return 0;
 //testunit
 int main(int argv,char **argc){
 
-if(argv>maxDirToVers+1){printf("too much arg to process");return 0;}
-for(int i=1;i<argv;i++){
+if(argv>maxDirToVers+1){printf("too much arg to process");exit(0);}//daca sunt prea multe argumente
+pid_t idProc;
+for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inca odata si exista si e dir creeam un proces nou(in care vers dir respectiv)
    if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
-    versionate(argc[i],1);  //daca nu activeasa fct de versionare  
+    struct stat infoDir;
+    if(lstat(argc[i],&infoDir)==-1)continue;
+    if(!S_ISDIR(infoDir.st_mode))continue;
+    
+    
+    if((idProc=fork())==-1)exit(-1);
+    
+    if(!idProc){
+    versionate(argc[i],0);  //daca nu activeasa fct de versionare
+    exit(0);
+    }
+}
+
+if(idProc){
+int status;
+wait(&status);
+if(WIFEXITED(status)){
+if(WEXITSTATUS(status))
+printf("program terminated abnormally");
+else
+printf("program terminated succesfully");
+}
+else
+printf("program terminated abnormally");
+printf("\n");
 }
 
 return 0;
