@@ -10,4 +10,4 @@ oricate fisiere de vers pana in 10,si sa salvam modiff daca sunt
 mai primim inca un nume de folder in care salvam vers
 
 cerinta sapt8:
-pt fiecare arg creeam un proces
+pt fiecare arg creeam un proces(in care in interiorul procesului fiu creat sa versionam dir cu tare dat ca arg),astfel incat ele se se versioneze in paralel
