@@ -300,7 +300,6 @@ Entries* newEntry(char *pathOriginal,char *filename){
     
     struct stat info;
     if(lstat(path,&info)==-1)return NULL;
-
     if(S_ISREG(info.st_mode)){
       Entries *reff=newFileEntry(path,filename);
       free(path);

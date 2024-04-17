@@ -11,3 +11,11 @@ mai primim inca un nume de folder in care salvam vers
 
 cerinta sapt8:
 pt fiecare arg creeam un proces(in care in interiorul procesului fiu creat sa versionam dir cu tare dat ca arg),astfel incat ele se se versioneze in paralel
+
+cerinte sapt9:
+pt toate dir (pana in 10),care sunt valide(nu se mai repeta,si e dir si exista), le verificam sa nu aiba fis corupte
+Verificarea fis:
+verific drepurilor(lispesc toate=1),daca da se creeaza un nou proces care analizeaza fis cu tare(se repeta cuvintele "corrupted""risk""attack","malware","malicious" sau sunt caract nonAscii=2)
+daca se respect si 1 si 2 se sterge fis din dirCurent si se pune in dir primului arg(dir de fis malitioase) si dupa se versioneaza
+daca nu se respect 1 si 2 sau doar 1 nu se sterge fis cu tare si se versioneaza direct 
+

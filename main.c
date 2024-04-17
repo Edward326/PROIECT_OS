@@ -1,7 +1,77 @@
 #include<stdio.h>
+#include<sys/sendfile.h>
 #include"gitStruct.h"
 #define maxDirToVers 10
+#define isolatedDirName "isolatedFiles"
 
+void deleteFile(char *path,char *filename){
+    struct stat trash;
+    if (lstat(isolatedDirName, &trash) == -1) {
+        if (mkdir(isolatedDirName, S_IRWXU | S_IRWXG | S_IRWXO) == -1)return;
+    }
+
+char *isPath=malloc(strlen(isolatedDirName)+strlen(filename)+2);
+    strcpy(isPath,isolatedDirName);strcat(isPath,"/");
+    strcat(isPath,filename);isPath[strlen(isPath)]='\0';
+
+int fileDesc,fileDescOrigin;
+ if((fileDesc=open(isPath, O_RDWR | O_CREAT | O_TRUNC, 111111111))==-1){ free(isPath);return;}
+fileDescOrigin=open(path, O_RDONLY);
+
+struct stat source_stat;if(lstat(path,&source_stat)==-1){free(isPath);close(fileDesc);close(fileDescOrigin);return;}
+sendfile(fileDesc, fileDescOrigin, NULL, source_stat.st_size);
+
+
+free(isPath);close(fileDesc);close(fileDescOrigin);
+
+if(remove(path))printf("error");
+
+}
+void verifyEachFile(char *pathOriginal,char *filename){
+    
+    char *path=malloc(strlen(pathOriginal)+strlen(filename)+2);
+    strcpy(path,pathOriginal);strcat(path,"/");
+    strcat(path,filename);path[strlen(path)]='\0';
+    
+    struct stat info;
+    if(lstat(path,&info)==-1)return;
+    
+    if(S_ISDIR(info.st_mode)){
+        DIR *dir;
+    if(!(dir=opendir(path))){free(path);return;}
+    struct dirent *i;
+    while((i=readdir(dir))){
+         if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
+    verifyEachFile(path,i->d_name);
+    }
+    closedir(dir);
+    }
+    else
+     if(S_ISREG(info.st_mode)){
+    if(info.st_mode==32768){
+        pid_t id=fork();
+        if(!id){
+            execl("checkIntegrity.sh","./checkIntegrity.sh",path,NULL);
+        }
+        else
+        {int st;
+            wait(&st);
+            if(WEXITSTATUS(st)==255){
+            deleteFile(path,filename);}
+        }
+    }
+     }
+     free(path);
+}
+void checkMalitious(char *dirToCheck){
+    DIR *dir;if(!(dir=opendir(dirToCheck))) return;
+struct dirent *i;
+while((i=readdir(dir))){
+      if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
+      verifyEachFile(dirToCheck,i->d_name);
+}
+closedir(dir);
+} 
 int parc(char **argc,char *cargc,int stop){
  for(int j=0;j<stop;j++){
         if(strcmp(argc[j],cargc)==0)return 1;
@@ -24,6 +94,7 @@ for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inc
     if((idProc=fork())==-1){printf("error on fork\n");exit(-1);}
     
     if(!idProc){
+        checkMalitious(argc[i]);
     versionate(argc[i],0);//doar daca suntem in fiu atunci il veriosnam si terminam procesul
     exit(0);//linia X
     }
@@ -53,7 +124,7 @@ exit(0);
 
 
 
-
+//CALCULAT:in paralel de 8x ori mai rapid
 //fct cere dir sa le versioneze
 //in fct main vom inititia un proces nou(mainProcess) in care vom apela fct processOpener in care vom versiona fiecare dintre dir primite ca arg in linia de cmd
 //mainProcess va returna 255(adica -1) daca sunt mai multe arg decat max,sau fct fork a generat vreo eroare undeva
