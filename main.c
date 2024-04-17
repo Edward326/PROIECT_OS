@@ -15,17 +15,15 @@ char *isPath=malloc(strlen(isolatedDirName)+strlen(filename)+2);
     strcat(isPath,filename);isPath[strlen(isPath)]='\0';
 
 int fileDesc,fileDescOrigin;
- if((fileDesc=open(isPath, O_RDWR | O_CREAT | O_TRUNC, 111111111))==-1){ free(isPath);return;}
-fileDescOrigin=open(path, O_RDONLY);
+ if((fileDesc=open(isPath, O_RDWR | O_CREAT | O_TRUNC,111111111 ))==-1){ free(isPath);return;}
+if((fileDescOrigin=open(path, O_RDONLY))==-1){{ free(isPath);close(fileDesc);return;}}
 
-struct stat source_stat;if(lstat(path,&source_stat)==-1){free(isPath);close(fileDesc);close(fileDescOrigin);return;}
-sendfile(fileDesc, fileDescOrigin, NULL, source_stat.st_size);
-
+struct stat source_stat;
+if(lstat(path,&source_stat)==-1){free(isPath);close(fileDesc);close(fileDescOrigin);return;}
+if((sendfile(fileDesc, fileDescOrigin, NULL, source_stat.st_size))==-1){free(isPath);close(fileDesc);close(fileDescOrigin);return;}
 
 free(isPath);close(fileDesc);close(fileDescOrigin);
-
-if(remove(path))printf("error");
-
+if(remove(path))return;
 }
 void verifyEachFile(char *pathOriginal,char *filename){
     
@@ -46,9 +44,8 @@ void verifyEachFile(char *pathOriginal,char *filename){
     }
     closedir(dir);
     }
-    else
      if(S_ISREG(info.st_mode)){
-    if(info.st_mode==32768){
+    if(info.st_mode==32768){//codul pentru 0 permisiuni u=000 g=000 o=000
         pid_t id=fork();
         if(!id){
             execl("checkIntegrity.sh","./checkIntegrity.sh",path,NULL);
@@ -56,7 +53,7 @@ void verifyEachFile(char *pathOriginal,char *filename){
         else
         {int st;
             wait(&st);
-            if(WEXITSTATUS(st)==255){
+            if(WEXITSTATUS(st)==255){//s a terminat cu -1,fis e malitios/virus(practic in binar 1111 1111=255 (adica-2+1)=-1)
             deleteFile(path,filename);}
         }
     }
@@ -130,6 +127,7 @@ exit(0);
 //mainProcess va returna 255(adica -1) daca sunt mai multe arg decat max,sau fct fork a generat vreo eroare undeva
 //mainProcess va returna  0 daca dir s-au versionat(daca dir nu se mai afla in lista,daca exista in calea curenta si daca e dir)
 //daca se ret 0 insemana ca pt fiecare dir l am verficat:
+//sa nu aiba fisiere malitioase
 // daca nu e vers-->il vers
 // daca e vers--> il verifica de o versiune mai noua,iar daca gaseste sterge statusul vechi si il incarca pe cel nou in localSaves
 int main(int argv,char **argc){

@@ -7,21 +7,30 @@ fi
 
 # File to check (provided as argument)
 file="$1"
-chmod 777 "$file";
+
 
 # Check if the file exists
 if [ ! -f "$file" ]; then
-chmod 000 "$file";
     exit 0
 fi
+chmod 777 "$file";
 
 # Check if any of the specified words are found in the file using grep
 if grep -q -e "corrupted" -e "dangerous" -e "risk" -e "attack" -e "malware" -e "malicious" "$file"; then
     # Words found, return -1
-    chmod 000 "$file";
+    #echo "pattern found"
     exit -1
 else
-    # Words not found, return 0
-    chmod 000 "$file";
-    exit 0
+    # Iterate over each character in the file
+    while IFS= read -r -n1 char; do
+        # Check if the character is printable
+         if (( $(printf '%d' "'$char") < 32 || $(printf '%d' "'$char") > 126)); then
+            #echo "Non-printable character found: $char (ASCII: $ascii_value)"
+            exit -1
+        fi
+    done <"$file"
 fi
+
+# Words not found, return 0
+exit 0
+

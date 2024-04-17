@@ -13,16 +13,19 @@ cerinta sapt8:
 pt fiecare arg creeam un proces(in care in interiorul procesului fiu creat sa versionam dir cu tare dat ca arg),astfel incat ele se se versioneze in paralel
 
 cerinte sapt9:
-pt toate dir (pana in 10),care sunt valide(nu se mai repeta,si e dir si exista),
-e verificam sa nu aiba fis corupte
-Verificarea fis:
-verificarea drepurilor(lispesc toate pt u g o)-->1
+se pastreaza cerinta de sapt trecuta
+daca se primesc mai mult de maxDirToVers arg sa se versioneze sau sunt prea multe dir de versionat si nu mai OS nu mai poate aloca un PID,runout procesul principal ret eroare,-1=255
+daca nu se ret -1 se trece pe la fieacere dir,daca nu apare deja in lista de dir primita ca arg in l de comanda si exxista si bineinteles e si dir/folder, ii creeam un nou proces dir daca nu trecem la urm dir
+in procesul de vers a dir-ului,prima oara se verifica de fisiere malitioase directorul:
+un fisier malitios e daca:
+nu are nicun drept de utilizator,st_mode=32768(fix) si (are in interiorul sau cuvinte cheie precum "malware"/"virus"/etc ,vezi in checkIntegrity.sh    sau    are un caracter NONASCII nu apartine[32,123])
+*fisierele care sunt mailtioase si care nu ==>se schimba automat dreptul pe ele in full-rights~777 (daca nu e malitios el va fii continut de catre snapshot,iar pentru a-i creea un snapshot corect acestuia trb sa avem acces la contiutul fisierului,adica sa avem full drepturi pe el   ||  daca e malitios vom vrea sa avem full acces pe el fiindca vom vrea sa i dam cut intr un folder isolatedFiles si pentru a da cut avem nevoie de continutul lui)
 
-daca da se creeaza un nou proces care analizeaza fis cu tare(daca se repeta cuvintele "corrupted""risk""attack","malware","malicious" sau sunt caract nonAscii=2)-->2 
--->daca 2 e valid se sterge fis din dir normal
--->daca 2 nu e valid se lasa fis in dir
+la final daca e malitios dispare din dir si e stocat in isolatedFiles ,daca nu e malitios se retine in continuare in fisier
+dupa care se trimite la versionare(e deja vers-->check pentru modiff || nu e deja vers-->versioneaza l)
 
-daca nu se respect 1 si 2 sau doar 1 nu se sterge fis cu tare
+AVEM UN PROCES -->ACTIVEAZA FCT processOpener(respponsabila de vers dir),iar FCT processOpener-->CREEAZA UN NOU PROCES PENTRU FIECARE DIR ,IN CARE IN INT LUI (P FIU) SA ACTIVEZE FCT checkMalitious(care in caz de gaisre a unui posibil fisier corupt va creea un nou process pt a l verifica daca chiar e corupt) si SA ACTIVEZE versionate(vers dir)
+PROBLEME:pe git fisierele care nu au zero permissions nu pot fii incarcate asa ca mereu cand gasim asftel de fisier ii activam toate permisiunile
+ 
 
-dupa versionam directorul(care va avea toate fis malitiaose,respecta 1 si 2 ,sterse)
 
