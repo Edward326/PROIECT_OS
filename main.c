@@ -79,7 +79,7 @@ while((i=readdir(dir))){
       if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
       verifyEachFile(dirToCheck,i->d_name,counterMaltious);
 }
-int st;wait(&st);//daca s au lansat procese nepoti
+int st;wait(&st);//daca s au lansat procese nepoti(care au perms 000)
 closedir(dir);
 } 
 int parc(char **argc,char *cargc,int stop){
@@ -99,6 +99,7 @@ for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inc
     struct stat infoDir;
     if(lstat(argc[i],&infoDir)==-1)continue;
     if(!S_ISDIR(infoDir.st_mode))continue;//verificam sa exsiste argumentul si sa fie director ca sa putem sa i creeam proces sa l versionam    
+   
     if((idProc=fork())==-1){printf("error on fork\n");exit(-1);}
     
     if(!idProc){
@@ -138,6 +139,7 @@ int main(int argv,char **argc){
 clock_t start=clock();
 
 pid_t pid=fork();
+
 if(!pid)
 processOpener(argv,argc);
 
@@ -150,6 +152,6 @@ if(!WIFEXITED(status))//-1
 else
 printf("program terminated succesfully\n");
 
-printf("\n\n\nmainProcess terminated with totalNoOfMalitiousFiles found:%d\ntotalExecTime:%f sec\n",WEXITSTATUS(status),((double) (end - start)) / CLOCKS_PER_SEC);
+printf("\n\n\nmainProcess terminated with a total of Malitious Files found:%d\ntotalExecTime:%f sec\n",WEXITSTATUS(status),((double) (end - start)) / CLOCKS_PER_SEC);
 return 0;
 }

@@ -8,13 +8,13 @@ fi
 # File to check (provided as argument)
 file="$1"
 
-
 # Check if the file exists
 if [ ! -f "$file" ]; then
     echo "SUCCES"
     exit 0
 fi
-chmod 777 "$file";
+
+chmod 777 "$file"
 
 # Check if any of the specified words are found in the file using grep
 line_count=$(wc -l < "$file")
@@ -25,26 +25,25 @@ char_count=$(wc -c < "$file")
 if [ "$line_count" -lt 3 ] && [ "$word_count" -gt 100 ] && [ "$char_count" -gt 200 ]; then
     echo "CORRUPT"
     exit -1
-fi
 else
-if grep -q -e "corrupted" -e "dangerous" -e "risk" -e "attack" -e "malware" -e "malicious" "$file"; then
-    # Words found, return -1
-    #echo "pattern found"
-    echo "CORRUPT"
-    exit -1
-else
-    # Iterate over each character in the file
-    while IFS= read -r -n1 char; do
-        # Check if the character is printable
-         if (( $(printf '%d' "'$char") < 32 || $(printf '%d' "'$char") > 126)); then
-            #echo "Non-printable character found: $char (ASCII: $ascii_value)"
-             echo "CORRUPT"
-             exit -1
-        fi
-    done <"$file"
+    if grep -q -e "corrupted" -e "dangerous" -e "risk" -e "attack" -e "malware" -e "malicious" "$file"; then
+        # Words found, return -1
+        #echo "pattern found"
+        echo "CORRUPT"
+        exit -1
+    else
+        # Iterate over each character in the file
+        while IFS= read -r -n1 char; do
+            # Check if the character is printable
+            if (( $(printf '%d' "'$char") < 32 || $(printf '%d' "'$char") > 126)); then
+                #echo "Non-printable character found: $char (ASCII: $ascii_value)"
+                echo "CORRUPT"
+                exit -1
+            fi
+        done <"$file"
+    fi
 fi
 
 # Words not found, return 0
- echo "SUCCES"
+echo "SUCCES"
 exit 0
-
