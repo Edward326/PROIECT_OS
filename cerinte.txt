@@ -27,5 +27,12 @@ dupa care se trimite la versionare(e deja vers-->check pentru modiff || nu e dej
 AVEM UN PROCES -->ACTIVEAZA FCT processOpener(respponsabila de vers dir),iar FCT processOpener-->CREEAZA UN NOU PROCES PENTRU FIECARE DIR ,IN CARE IN INT LUI (P FIU) SA ACTIVEZE FCT checkMalitious(care in caz de gaisre a unui posibil fisier corupt va creea un nou process pt a l verifica daca chiar e corupt) si SA ACTIVEZE versionate(vers dir)
 PROBLEME:pe git fisierele care nu au zero permissions nu pot fii incarcate asa ca mereu cand gasim asftel de fisier ii activam toate permisiunile
  
+ cerinte sapt10:
+ fis e malitios daca : in plus e fara dreputi +(1-linii<3&&nr de word>100 &&nr de caract>200)||(2-caract non ASCII||pattern uri)
+ vericiam in paralel pt fiecare dir toate fis,verificam daca e melitios==>daca nu are drepturi si 1 || 2 ,daca da exec returneaza numele fiseirului daca nu returneaza safe,
+ daca fis ret la exec:
+ DA-numele fis, se contorizeaz fisierul(ca dupa la final se ret suma totala de contor pe dir ul respectiv,adica nr de fisiere corupte si se sterge din dir)
+ NU-daca nu se lasa acolo
+ in procesul tata care preia toate iteratiile aduna toate nr de fisiere corupte si dupa la iesirea din procesul tata se returneaza nr de fi corupte 
 
 

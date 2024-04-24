@@ -25,7 +25,7 @@ if((sendfile(fileDesc, fileDescOrigin, NULL, source_stat.st_size))==-1){free(isP
 free(isPath);close(fileDesc);close(fileDescOrigin);
 if(remove(path))return;
 }
-void verifyEachFile(char *pathOriginal,char *filename){
+void verifyEachFile(char *pathOriginal,char *filename,int *counterMaltious){
     
     char *path=malloc(strlen(pathOriginal)+strlen(filename)+2);
     strcpy(path,pathOriginal);strcat(path,"/");
@@ -33,40 +33,53 @@ void verifyEachFile(char *pathOriginal,char *filename){
     
     struct stat info;
     if(lstat(path,&info)==-1)return;
-    
+
     if(S_ISDIR(info.st_mode)){
         DIR *dir;
     if(!(dir=opendir(path))){free(path);return;}
     struct dirent *i;
     while((i=readdir(dir))){
          if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
-    verifyEachFile(path,i->d_name);
+    verifyEachFile(path,i->d_name,counterMaltious);
     }
     closedir(dir);
     }
-     if(S_ISREG(info.st_mode)){
+    
+    if(S_ISREG(info.st_mode)){
     if(info.st_mode==32768){//codul pentru 0 permisiuni u=000 g=000 o=000
+        int nephewPipe[2];pipe(nephewPipe); 
         pid_t id=fork();
         if(!id){
-            execl("checkIntegrity.sh","./checkIntegrity.sh",path,NULL);
+        close(nephewPipe[0]);
+        dup2(nephewPipe[1],1);
+        execl("checkIntegrity.sh","./checkIntegrity.sh",path,NULL);//nu mai necesita close,se inchide iesire std,automat si nephewPipe[1]
         }
         else
-        {int st;
-            wait(&st);
-            if(WEXITSTATUS(st)==255){//s a terminat cu -1,fis e malitios/virus(practic in binar 1111 1111=255 (adica-2+1)=-1)
-            deleteFile(path,filename);}
+        {   //int st;
+            //wait(&st);
+           char versResult[8];
+        close(nephewPipe[1]);
+        ssize_t bytesRead;
+    while ((bytesRead = read(nephewPipe[0], versResult, sizeof(versResult) - 1)) > 0) {
+        versResult[bytesRead] = '\0'; 
+        if(!strcmp(versResult,"CORRUPT")){
+            *counterMaltious+=1;deleteFile(path,filename);
         }
+        }
+        close(nephewPipe[0]);
+        }   
     }
-     }
+    }
      free(path);
 }
-void checkMalitious(char *dirToCheck){
+void checkMalitious(char *dirToCheck,int *counterMaltious){
     DIR *dir;if(!(dir=opendir(dirToCheck))) return;
 struct dirent *i;
 while((i=readdir(dir))){
       if(strcmp(i->d_name,".")==0 || strcmp(i->d_name,"..")==0)continue;
-      verifyEachFile(dirToCheck,i->d_name);
+      verifyEachFile(dirToCheck,i->d_name,counterMaltious);
 }
+int st;wait(&st);//daca s au lansat procese nepoti
 closedir(dir);
 } 
 int parc(char **argc,char *cargc,int stop){
@@ -79,7 +92,7 @@ int processOpener(int argv,char **argc){
 
 if(argv>maxDirToVers+1 ||argv<2){printf("too much arg/less arg\n");exit(-1);}//daca sunt prea multe argumente
 
-pid_t idProc;
+pid_t idProc;int counter=0;
 for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inca odata si exista si e dir creeam un proces nou(in care vers dir respectiv),toate procesele astea facandu se in paralel
    
    if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
@@ -89,25 +102,18 @@ for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inc
     if((idProc=fork())==-1){printf("error on fork\n");exit(-1);}
     
     if(!idProc){
-        checkMalitious(argc[i]);
+        checkMalitious(argc[i],&counter);
     versionate(argc[i],0);//doar daca suntem in fiu atunci il veriosnam si terminam procesul
-    exit(0);//linia X
+    exit(counter);
     }
 }
-int status;
-wait(&status);//la final procesul tata(creator al tuturor celorlalte procese,in care se vers dir) primeste codul de terminare de la fiecare proces al lui,ca mai apoi sa le inchida
+int status,totalCounter=0;
 
-if(WIFEXITED(status)){//mereu va fii 0 datorita==>linia X
-
-if(WEXITSTATUS(status))
-printf("program terminated abnormally\n");
-else
-printf("program terminated succesfully\n");
-}
-else
-printf("program terminated abnormally\n");
-
-exit(0);
+ for (int i = 0; i < argv - 1; i++) { // fiindca toate dir le prelucram in paralel==>la fiecare countul ant nu se salveaza,iar atunci le returnam in fiecare proces fiu si dupa le adunam in proc tata
+        wait(&status);
+        totalCounter += WEXITSTATUS(status);
+    }
+exit(totalCounter);
 }
 
 
@@ -133,13 +139,17 @@ clock_t start=clock();
 
 pid_t pid=fork();
 if(!pid)
-exit(processOpener(argv,argc));
+processOpener(argv,argc);
 
 int status;
 wait(&status);
-
 clock_t end=clock();
 
-if(WIFEXITED(status))
-printf("\n\n\nmainProcess terminated with code:%d\ntotalExecTime:%f sec\n",WEXITSTATUS(status),((double) (end - start)) / CLOCKS_PER_SEC);
+if(!WIFEXITED(status))//-1
+{printf("program terminated abnormally\n");return 0;}
+else
+printf("program terminated succesfully\n");
+
+printf("\n\n\nmainProcess terminated with totalNoOfMalitiousFiles found:%d\ntotalExecTime:%f sec\n",WEXITSTATUS(status),((double) (end - start)) / CLOCKS_PER_SEC);
+return 0;
 }
