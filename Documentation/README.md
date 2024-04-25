@@ -58,13 +58,11 @@ program terminated succefully
 mainProcess terminated with a total of Malitious Files found: nr de fis malitoase gasite
 totalExecTime: %f sec
 
-<span style="color: red;">
+
+
+
+
 ATENTIE:daca fis are permis 000 si nu se intalensc cazul 1,2 se va intalnii mereu cazul 3(BUG->nonascci char detector)
-</span>
-# My Project
 
-This is some text with <span style="font-family: Arial; color: blue;">blue Arial font</span>.
-
-Here's another example with <span style="font-family: Times New Roman; color: #ff0000;">red Times New Roman font</span>.
 
 
