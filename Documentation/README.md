@@ -58,5 +58,5 @@ program terminated succefully
 mainProcess terminated with a total of Malitious Files found: nr de fis malitoase gasite
 totalExecTime: %f sec
 
-
+<span style="color: red;">Red text</span>
 ATENTIE:daca fis are permis 000 si nu se intalensc cazul 1,2 se va intalnii mereu cazul 3(BUG->nonascci char detector)
