@@ -99,13 +99,28 @@ for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inc
     struct stat infoDir;
     if(lstat(argc[i],&infoDir)==-1)continue;
     if(!S_ISDIR(infoDir.st_mode))continue;//verificam sa exsiste argumentul si sa fie director ca sa putem sa i creeam proces sa l versionam    
-   
+    int pipeFd[2];
+    pipe(pipeFd);
     if((idProc=fork())==-1){printf("error on fork\n");exit(-1);}
     
     if(!idProc){
-        checkMalitious(argc[i],&counter);
+          checkMalitious(argc[i],&counter);
+        close(pipeFd[0]);
+        dup2(pipeFd[1],1);//sau 1
     versionate(argc[i],0);//doar daca suntem in fiu atunci il veriosnam si terminam procesul
+    close(pipeFd[1]);
     exit(counter);
+    }
+    else
+    {   
+        char versResult[1024+strlen(argc[i])];
+        close(pipeFd[1]);
+        ssize_t bytesRead;
+    while ((bytesRead = read(pipeFd[0], versResult, sizeof(versResult) - 1)) > 0) {
+        versResult[bytesRead] = '\0'; // Ensure null termination
+        printf("%s", versResult); // Print the data read from the pipe
+    }
+        close(pipeFd[0]);
     }
 }
 int status,totalCounter=0;
@@ -147,11 +162,11 @@ int status;
 wait(&status);
 clock_t end=clock();
 
-if(!WIFEXITED(status))//-1
-{printf("program terminated abnormally\n");return 0;}
+if(WEXITSTATUS(status)==255)//-1
+{printf("program terminated abnormally\n");return -1;}
 else
-printf("program terminated succesfully\n");
+printf("\n\n\nprogram terminated succesfully\n");
 
-printf("\n\n\nmainProcess terminated with a total of Malitious Files found:%d\ntotalExecTime:%f sec\n",WEXITSTATUS(status),((double) (end - start)) / CLOCKS_PER_SEC);
+printf("\nmainProcess terminated with a total of Malitious Files found:%d\ntotalExecTime: %f sec\n",WEXITSTATUS(status),((double) (end - start)) / CLOCKS_PER_SEC);
 return 0;
 }

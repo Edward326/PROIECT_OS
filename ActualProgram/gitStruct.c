@@ -420,7 +420,7 @@ int gitcommit(char *dirToSaveName,LocalDir *dirVersionated)
         return 1;}
         for(int i=0;i<dirNewVers->entryCount;i++){
         if(compare(&dirNewVers->entry[i],&dirVersionated->entry[i])){
-           puts(dirVersionated->entry[i].fileName);
+           //puts(dirVersionated->entry[i].fileName);
         gitWrite(dirNewVers);
         return 1;}
         }
@@ -462,8 +462,16 @@ printf("\e[1;32mdir is clear,nothing to be modified\e[0;37m\n");
 }
 else
 {
-gitinit(argc,&base);
-gitcommit(argc,base);
+    printf("dirName:");puts(argc);
+    int verify=gitinit(argc,&base);
+if(verify==-1){printf("dir doesnt exists/path not redirecting to a dir type file\n\n");freeLib(&base);return;}
+if(verify==1){printf("dir versionat\n\n");freeLib(&base);return;}
+else{
+    printf("dir already versionated,finding possible modifies:");
+if(gitcommit(argc,base))printf("\e[1;31mmodifies found\e[0;37m,saved new version of it\n\n");
+else
+printf("\e[1;32mdir is clear\e[0;37m,nothing to be modified\n\n");
+}
 }
 freeLib(&base);
 }
