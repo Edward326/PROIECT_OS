@@ -127,6 +127,7 @@ int status,totalCounter=0;
 
  for (int i = 0; i < argv - 1; i++) { // fiindca toate dir le prelucram in paralel==>la fiecare countul ant nu se salveaza,iar atunci le returnam in fiecare proces fiu si dupa le adunam in proc tata
         wait(&status);
+        if(WIFEXITED(status))
         totalCounter += WEXITSTATUS(status);
     }
 exit(totalCounter);
