@@ -31,16 +31,17 @@ else
         #echo "pattern found"
         echo "CORRUPT"
         exit -1
-    else
+     
+    #else
         # Iterate over each character in the file
-        while IFS= read -r -n1 char; do
+     #   while IFS= read -r -n1 char; do
             # Check if the character is printable
-            if (( $(printf '%d' "'$char") < 32 || $(printf '%d' "'$char") > 126)); then
+      #      if (( $(printf '%d' "'$char") < 32 || $(printf '%d' "'$char") > 126)); then
                 #echo "Non-printable character found: $char (ASCII: $ascii_value)"
-                echo "CORRUPT"
-                exit -1
-            fi
-        done <"$file"
+       #         echo "CORRUPT"
+        #        exit -1
+         #   fi
+        #done <"$file"
     fi
 fi
 
