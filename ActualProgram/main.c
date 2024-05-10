@@ -92,7 +92,7 @@ int processOpener(int argv,char **argc){
 
 if(argv>maxDirToVers+1 ||argv<2){printf("too much arg/less arg\n");exit(-1);}//daca sunt prea multe argumente
 
-pid_t idProc;int counter=0;
+pid_t idProc;int counter=0,aliveProcesses=0;
 for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inca odata si exista si e dir creeam un proces nou(in care vers dir respectiv),toate procesele astea facandu se in paralel
    
    if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
@@ -121,14 +121,24 @@ for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inc
         printf("%s", versResult); // Print the data read from the pipe
     }
         close(pipeFd[0]);
+        aliveProcesses++;
     }
 }
-int status,totalCounter=0;
+int totalCounter=0;
 
- for (int i = 0; i < argv - 1; i++) { // fiindca toate dir le prelucram in paralel==>la fiecare countul ant nu se salveaza,iar atunci le returnam in fiecare proces fiu si dupa le adunam in proc tata
-        wait(&status);
-        if(WIFEXITED(status))
-        totalCounter += WEXITSTATUS(status);
+while (aliveProcesses > 0) {
+        int status;
+        pid_t terminatedChild = waitpid(-1, &status, WNOHANG);
+        //-1 pentru astepta toti fii creati si semnalul WNOHANG e folosit pentru a nu se bloca tatal la waitpid in cazul in care procesul curent n a iesit inca, practic un paralelism la prinderea codului de terminare
+        if (terminatedChild > 0) {
+            if (WIFEXITED(status)) 
+                totalCounter += WEXITSTATUS(status);
+            
+            aliveProcesses--;
+        } else if (terminatedChild == -1) {
+            printf("Error in waitpid\n");
+            exit(-1);
+        }
     }
 exit(totalCounter);
 }
