@@ -98,7 +98,7 @@ for(int i=1;i<argv;i++){//daca sunt suff arg mergem la fieacre,daca nu apare inc
    if(parc(argc,argc[i],i))continue;//verificam sa nu mai existe acel arg in lista de arg
     struct stat infoDir;
     if(lstat(argc[i],&infoDir)==-1)continue;
-    if(!S_ISDIR(infoDir.st_mode))continue;//verificam sa exsiste argumentul si sa fie director ca sa putem sa i creeam proces sa l versionam    
+    if(!S_ISDIR(infoDir.st_mode) || S_ISLNK(infoDir.st_mode))continue;//verificam sa exsiste argumentul si sa fie director ca sa putem sa i creeam proces sa l versionam      
     int pipeFd[2];
     pipe(pipeFd);
     if((idProc=fork())==-1){printf("error on fork\n");exit(-1);}
